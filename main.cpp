@@ -1,9 +1,25 @@
 #include "RtAudio.h"
+#include "lo/lo.h"
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
 #include <vector>
+
+
+// liblo functions
+void osc_error(int num, const char *m, const char *path);
+
+int osc_generic_handler(const char *path, const char *types, lo_arg **argv,
+		    int argc, void *data, void *user_data);
+
+int foo_handler(const char *path, const char *types, lo_arg **argv, int argc,
+		 void *data, void *user_data);
+
+int quit_handler(const char *path, const char *types, lo_arg **argv, int argc,
+		 void *data, void *user_data);
+
+void read_stdin(void);
 
 
 void listDevices(RtAudio& audio)
@@ -59,13 +75,35 @@ int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFr
 
 	for (int i=0; i<nBufferFrames; ++i)
 	{
-		((float*)outputBuffer)[i] = sineTable.table[sineTableIndex];
+		((float*)outputBuffer)[i] = 0.1*sineTable.table[sineTableIndex];
 		sineTableIndex = (1+sineTableIndex)%sineTable.table.size();
 	}
 
-	std::cout << "test(" << nBufferFrames << "," << sineTableIndex << ")" << std::flush;
-
 	return 0;
+}
+
+/* catch any incoming messages and display them. returning 1 means that the
+ * message has not been fully handled and the server should try other methods */
+int osc_generic_handler(const char *path, const char *types, lo_arg **argv,
+		    int argc, void *data, void *user_data)
+{
+    int i;
+
+    std::cout << "path: " << path << '\n';
+    for (i=0; i<argc; i++) {
+	std::cout << "arg " << i << ' ' << types[i];
+	lo_arg_pp((lo_type)types[i], argv[i]);
+	std::cout << '\n';
+    }
+    std::cout << std::endl;
+
+    return 1;
+}
+
+void osc_error(int num, const char *msg, const char *path)
+{
+	std::cout << "OSC error #" << num << " at path " << path << ": "
+		<< msg << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -101,9 +139,25 @@ int main(int argc, char** argv)
 
 	bufferBytes = bufferFrames * 2 * 4;
 
+
+	// OSC initialization
+	int lo_fd;
+	fd_set rfds;
+	struct timeval tv;
+	int retval;
+	lo_server osc_server = lo_server_new("7770", osc_error);
+	lo_server_add_method(osc_server, NULL, NULL, osc_generic_handler, NULL);
+
 	try
 	{
 		audio.startStream();
+
+		// TODO: replace this with select or put it in its
+		// own thread
+		while (true)
+		{
+			lo_server_recv_noblock(osc_server, 0);
+		}
 
 		char input;
 		std::cout << "\nRunning ... press <enter> to quit.\n";
