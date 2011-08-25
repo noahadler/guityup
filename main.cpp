@@ -1,5 +1,6 @@
 #include "RtAudio.h"
 #include "lo/lo.h"
+#include "RtMidi.h"
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
@@ -106,9 +107,19 @@ void osc_error(int num, const char *msg, const char *path)
 		<< msg << std::endl;
 }
 
+void midiCallback( double deltatime, std::vector< unsigned char > *message, void *userData )
+{
+  unsigned int nBytes = message->size();
+  for ( unsigned int i=0; i<nBytes; i++ )
+    std::cout << "Byte " << i << " = " << (int)message->at(i) << ", ";
+  if ( nBytes > 0 )
+    std::cout << "stamp = " << deltatime << std::endl;
+}
+
 int main(int argc, char** argv)
 {
 	RtAudio audio;
+	RtMidiOut midiOut;
 
 	// list devices
 	if (argc == 1)
