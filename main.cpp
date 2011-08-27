@@ -23,7 +23,7 @@ int quit_handler(const char *path, const char *types, lo_arg **argv, int argc,
 void read_stdin(void);
 
 
-void listDevices(RtAudio& audio)
+void listDevices(RtAudio& audio, RtMidiIn& midiIn, RtMidiOut& midiOut)
 {
 
 
@@ -38,10 +38,15 @@ void listDevices(RtAudio& audio)
 		info = audio.getDeviceInfo( i );
 
 		if ( info.probed == true ) {
-			std::cout << i << ") " << info.name << " (maximum output channels = " << info.outputChannels << ")\n";
+			std::cout << "Audio device #" << i << ": " << info.name << " (maximum output channels = " << info.outputChannels << ")\n";
 		}
 	}
 
+	for ( unsigned int i=0; i<midiIn.getPortCount(); ++i )
+		std::cout << "Midi In #" << i << ": " << midiIn.getPortName(i) << std::endl;
+
+	for ( unsigned int i=0; i<midiOut.getPortCount(); ++i )
+		std::cout << "Midi Out #" << i << ": " << midiOut.getPortName(i) << std::endl;
 }
 
 int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
@@ -119,12 +124,14 @@ void midiCallback( double deltatime, std::vector< unsigned char > *message, void
 int main(int argc, char** argv)
 {
 	RtAudio audio;
+
+	RtMidiIn midiIn;
 	RtMidiOut midiOut;
 
 	// list devices
 	if (argc == 1)
 	{
-		listDevices(audio);
+		listDevices(audio,midiIn,midiOut);
 		return 0;
 	}
 
