@@ -1,0 +1,17 @@
+# Configuration options, mostly parameters, just need an easy way to play
+# with different saved configs
+
+audio_device = 0
+
+# use -1 for MIDI virtual ports
+midi_in = 1
+
+midi_out = -1
+
+# +/- semitone range... make sure all controllers and tone generators
+# are calibrated to the same value
+pitch_bend_semitones = 12
+
+# function syntax:
+#   <function name> = [long] <mididevice1><midimsg1> [ + <mididevice2><midimsg2 [ + <midideviceN><midimsgN> ... ] ]
+func_toggle_recording = 00 80 31 7f

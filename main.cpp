@@ -1,12 +1,30 @@
 #include "RtAudio.h"
 #include "lo/lo.h"
 #include "RtMidi.h"
+#include "ConfigFile.h"
+#include "Looper.h"
 #include <iostream>
+#include <iomanip>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
 #include <vector>
 
+// This program is a multi-channel looper with sophisticated MIDI
+// capabilities.  It's designed particularly for guitar, with thought
+// towards other non-traditional MIDI devices, where bending, volume
+// swells, or other capabilities not typically needed for keyboard
+// based performances may arise.
+
+ConfigFile config("settings.txt");
+
+RtAudio audio;
+
+std::vector<RtMidiIn*> midiIn;
+std::vector<RtMidiOut*> midiOut;
+
+
+MidiLooper looper;
 
 // liblo functions
 void osc_error(int num, const char *m, const char *path);
@@ -81,11 +99,35 @@ int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFr
 
 	for (int i=0; i<nBufferFrames; ++i)
 	{
-		((float*)outputBuffer)[i] = 0.1*sineTable.table[sineTableIndex];
+		((float*)outputBuffer)[i] = 0.0*sineTable.table[sineTableIndex];
 		sineTableIndex = (1+sineTableIndex)%sineTable.table.size();
 	}
 
 	return 0;
+}
+
+void midiInputCallback(double deltatime, std::vector<unsigned char> *message, void *userData)
+{
+	double timestamp = audio.getStreamTime();
+	unsigned int nBytes = message->size();
+
+	// output the MIDI message
+	std::cout << std::setprecision(10) << std::setw(8)
+		<< timestamp << '\t'
+		<< std::setw(8) << deltatime << std::hex;
+	for (unsigned int i=0; i<nBytes; ++i)
+	{
+		std::cout << '\t' << (int)(message->at(i));
+	}
+	std::cout << std::dec << '\n';
+
+	// check bindings
+
+	// pass to phrase tracks
+	looper.consumeMidiMessage(timestamp, message, userData);
+
+	// pass to output
+	midiOut[0]->sendMessage(message);
 }
 
 /* catch any incoming messages and display them. returning 1 means that the
@@ -112,36 +154,21 @@ void osc_error(int num, const char *msg, const char *path)
 		<< msg << std::endl;
 }
 
-void midiCallback( double deltatime, std::vector< unsigned char > *message, void *userData )
-{
-  unsigned int nBytes = message->size();
-  for ( unsigned int i=0; i<nBytes; i++ )
-    std::cout << "Byte " << i << " = " << (int)message->at(i) << ", ";
-  if ( nBytes > 0 )
-    std::cout << "stamp = " << deltatime << std::endl;
-}
-
 int main(int argc, char** argv)
 {
-	RtAudio audio;
+	midiIn.push_back(new RtMidiIn("Guityup"));
+	midiOut.push_back(new RtMidiOut("Guityup"));
 
-	RtMidiIn midiIn;
-	RtMidiOut midiOut;
-
-	// list devices
-	if (argc == 1)
-	{
-		listDevices(audio,midiIn,midiOut);
-		return 0;
-	}
+	listDevices(audio,*midiIn[0],*midiOut[0]);
 
 	RtAudio::StreamParameters inputParams, outputParams;
-	inputParams.deviceId = std::atoi(argv[1]);
+	inputParams.deviceId = config.read<int>("audio_device"); //std::atoi(argv[1]);
   	inputParams.nChannels = 2;
 	outputParams = inputParams;
 
 	RtAudio::StreamOptions options;
-	options.flags = RTAUDIO_NONINTERLEAVED;
+	options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_MINIMIZE_LATENCY;
+	options.streamName = "Guityup";
 
 	unsigned int bufferBytes, bufferFrames = 128;
 
@@ -157,6 +184,20 @@ int main(int argc, char** argv)
 
 	bufferBytes = bufferFrames * 2 * 4;
 
+	// MIDI initialization
+	int midi_input_device = config.read<int>("midi_in", -1); 
+	if (midi_input_device == -1)
+		midiIn[0]->openVirtualPort("Guityup");
+	else
+		midiIn[0]->openPort(midi_input_device, "Guityup");
+	midiIn[0]->setCallback(&midiInputCallback);
+	midiIn[0]->ignoreTypes(false,false,false);
+
+	int midi_output_device = config.read<int>("midi_out", -1);
+	if (midi_output_device == -1)
+		midiOut[0]->openVirtualPort("Guityup");
+	else
+		midiOut[0]->openPort(midi_output_device, "Guityup");
 
 	// OSC initialization
 	int lo_fd;
