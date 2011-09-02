@@ -73,6 +73,15 @@ public:
 	double getScrubPositionInSeconds() const;
 
 	//inline const Key& getEstimatedKey() const { return estimatedKey; }
+
+	inline void setRecording(bool recording) { this->recording = recording; }
+	inline bool getRecording() { return recording; }
+
+	// return the state of recording _after_ toggling
+	inline bool toggleRecording()
+	{
+		return recording = !recording;
+	}
 };
 
 #endif

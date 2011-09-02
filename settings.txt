@@ -14,4 +14,4 @@ pitch_bend_semitones = 12
 
 # function syntax:
 #   <function name> = [long] <mididevice1><midimsg1> [ + <mididevice2><midimsg2 [ + <midideviceN><midimsgN> ... ] ]
-func_toggle_recording = 00 80 31 7f
+func_toggle_recording = 00 90 31 7f
