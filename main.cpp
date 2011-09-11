@@ -3,6 +3,7 @@
 #include "RtMidi.h"
 #include "ConfigFile.h"
 #include "Looper.h"
+#include "MidiBind.h"
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
@@ -23,8 +24,8 @@ RtAudio audio;
 std::vector<RtMidiIn*> midiIn;
 std::vector<RtMidiOut*> midiOut;
 
-
 MidiLooper looper;
+std::vector<MidiBind> midiBinds;
 
 // liblo functions
 void osc_error(int num, const char *m, const char *path);
@@ -122,6 +123,10 @@ void midiInputCallback(double deltatime, std::vector<unsigned char> *message, vo
 	std::cout << std::dec << '\n';
 
 	// check bindings
+	for (int i=0; i<midiBinds.size(); ++i)
+	{
+		midiBinds[i].processMessage(timestamp, message, userData);
+	}
 
 	// pass to phrase tracks
 	looper.consumeMidiMessage(timestamp, message, userData);
@@ -152,6 +157,11 @@ void osc_error(int num, const char *msg, const char *path)
 {
 	std::cout << "OSC error #" << num << " at path " << path << ": "
 		<< msg << std::endl;
+}
+
+void loadBindSettings()
+{
+	midiBinds.push_back(MidiBind("func_toggle_recording"));
 }
 
 int main(int argc, char** argv)
@@ -190,7 +200,7 @@ int main(int argc, char** argv)
 		midiIn[0]->openVirtualPort("Guityup");
 	else
 		midiIn[0]->openPort(midi_input_device, "Guityup");
-	midiIn[0]->setCallback(&midiInputCallback);
+	midiIn[0]->setCallback(&midiInputCallback, &midiIn[0]);
 	midiIn[0]->ignoreTypes(false,false,false);
 
 	int midi_output_device = config.read<int>("midi_out", -1);
@@ -206,6 +216,9 @@ int main(int argc, char** argv)
 	int retval;
 	lo_server osc_server = lo_server_new("7770", osc_error);
 	lo_server_add_method(osc_server, NULL, NULL, osc_generic_handler, NULL);
+
+	// restore bonds
+	loadBindSettings();
 
 	try
 	{
