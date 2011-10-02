@@ -125,7 +125,8 @@ void midiInputCallback(double deltatime, std::vector<unsigned char> *message, vo
 	// check bindings
 	for (int i=0; i<midiBinds.size(); ++i)
 	{
-		midiBinds[i].processMessage(timestamp, message, userData);
+		// TODO: pass proper device ID
+		midiBinds[i].processMessage(timestamp, 0, message, userData);
 	}
 
 	// pass to phrase tracks

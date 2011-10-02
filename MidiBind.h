@@ -21,11 +21,12 @@ typedef void (*MidiBindCallback)(MidiBind*, BindState);
 class MidiBind
 {
 	std::vector<unsigned char> message;
+	bool longPress;
 	unsigned char device;
 public:
 	MidiBind(const std::string& configName);
 
-	void processMessage(double timestamp, std::vector<unsigned char> *message, void *userData);
+	void processMessage(double timestamp, unsigned char device, std::vector<unsigned char> *message, void *userData);
 };
 
 #endif
