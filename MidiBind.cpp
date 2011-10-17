@@ -2,7 +2,8 @@
 #include <sstream>
 #include <cstdlib>
 
-MidiBind::MidiBind(const std::string& configName)
+MidiBind::MidiBind(const std::string& configName, MidiBindCallback callback)
+	: callback(callback)
 {
 	std::string setting = config.read<std::string>(configName);
 	std::cout<<"[" << configName << "] is [" << setting << "]\n";
@@ -63,6 +64,7 @@ void MidiBind::processMessage(double timestamp, unsigned char device, std::vecto
 		{
 			// TODO: trigger!
 			std::cout << "note trigger!" << std::endl;
+			callback(this, Activating);
 		}
 	}
 	else if (messageType == 0x08)
@@ -72,6 +74,7 @@ void MidiBind::processMessage(double timestamp, unsigned char device, std::vecto
 		{
 			// TODO: trigger or untrigger!
 			std::cout << "note off trigger!" << std::endl;
+			callback(this, Deactivating);
 		}
 	}
 	else if (messageType == 0x0b)

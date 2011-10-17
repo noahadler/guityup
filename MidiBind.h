@@ -23,8 +23,10 @@ class MidiBind
 	std::vector<unsigned char> message;
 	bool longPress;
 	unsigned char device;
+
+	MidiBindCallback callback;
 public:
-	MidiBind(const std::string& configName);
+	MidiBind(const std::string& configName, MidiBindCallback callback);
 
 	void processMessage(double timestamp, unsigned char device, std::vector<unsigned char> *message, void *userData);
 };

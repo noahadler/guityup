@@ -160,9 +160,14 @@ void osc_error(int num, const char *msg, const char *path)
 		<< msg << std::endl;
 }
 
+void bind_toggleRecording(MidiBind* bind, BindState state)
+{
+	std::cout << "TOGGLE RECORDING LOOP" << std::endl;
+}
+
 void loadBindSettings()
 {
-	midiBinds.push_back(MidiBind("func_toggle_recording"));
+	midiBinds.push_back(MidiBind("func_toggle_recording", &bind_toggleRecording));
 }
 
 int main(int argc, char** argv)
