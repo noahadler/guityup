@@ -1,6 +1,7 @@
 #ifndef GUITYUP_LOOPER
 #define GUITYUP_LOOPER
 
+#include "RtAudio.h"
 #include <vector>
 #include <deque>
 
@@ -23,6 +24,7 @@ struct MidiEvent
 };
 
 typedef std::deque<MidiEvent> MidiBuffer;
+extern RtAudio audio;
 
 class MidiLooper
 {
@@ -74,13 +76,30 @@ public:
 
 	//inline const Key& getEstimatedKey() const { return estimatedKey; }
 
-	inline void setRecording(bool recording) { this->recording = recording; }
-	inline bool getRecording() { return recording; }
+	inline void setRecording(bool recording)
+	{
+		if (recording)
+		{
+			this->recording = recording;
+			recordingStartedTimestamp = audio.getStreamTime();
+		}
+		else
+		{
+			this->recording = recording;
+			recordingLength = audio.getStreamTime() - recordingStartedTimestamp;
+			std::cout << "loop set: " << recordingLength << "s with " << sequence.size() << " MIDI events" << std::endl;
+		}
+	}
+	inline bool getRecording()
+	{
+		return recording;
+	}
 
 	// return the state of recording _after_ toggling
 	inline bool toggleRecording()
 	{
-		return recording = !recording;
+		setRecording(!recording);
+		return recording;
 	}
 };
 

@@ -163,6 +163,7 @@ void osc_error(int num, const char *msg, const char *path)
 void bind_toggleRecording(MidiBind* bind, BindState state)
 {
 	std::cout << "TOGGLE RECORDING LOOP" << std::endl;
+	looper.toggleRecording();
 }
 
 void loadBindSettings()
