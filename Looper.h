@@ -2,6 +2,7 @@
 #define GUITYUP_LOOPER
 
 #include "RtAudio.h"
+#include "RtMidi.h"
 #include <vector>
 #include <deque>
 
@@ -25,6 +26,7 @@ struct MidiEvent
 
 typedef std::deque<MidiEvent> MidiBuffer;
 extern RtAudio audio;
+extern std::vector<RtMidiOut*> midiOut;
 
 class MidiLooper
 {
@@ -62,10 +64,7 @@ class MidiLooper
 public:
 	MidiLooper();
 
-	//void prepareToPlay(double sampleRate, int estimatedSamplesPerBlock);
-	//void releaseResources();
-	//void processBlock(AudioSampleBuffer &, MidiBuffer &);
-
+	void advancePlayback(double deltatime);
 	void consumeMidiMessage(double deltatime, std::vector<unsigned char> *message, void *userData);
 
 	int getLengthInSamples() const;
@@ -76,31 +75,9 @@ public:
 
 	//inline const Key& getEstimatedKey() const { return estimatedKey; }
 
-	inline void setRecording(bool recording)
-	{
-		if (recording)
-		{
-			this->recording = recording;
-			recordingStartedTimestamp = audio.getStreamTime();
-		}
-		else
-		{
-			this->recording = recording;
-			recordingLength = audio.getStreamTime() - recordingStartedTimestamp;
-			std::cout << "loop set: " << recordingLength << "s with " << sequence.size() << " MIDI events" << std::endl;
-		}
-	}
-	inline bool getRecording()
-	{
-		return recording;
-	}
-
-	// return the state of recording _after_ toggling
-	inline bool toggleRecording()
-	{
-		setRecording(!recording);
-		return recording;
-	}
+	void setRecording(bool recording);
+	bool getRecording();
+	bool toggleRecording();
 };
 
 #endif

@@ -27,6 +27,8 @@ std::vector<RtMidiOut*> midiOut;
 MidiLooper looper;
 std::vector<MidiBind> midiBinds;
 
+double lastPlayTimestamp;
+
 // liblo functions
 void osc_error(int num, const char *m, const char *path);
 
@@ -104,18 +106,25 @@ int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFr
 		sineTableIndex = (1+sineTableIndex)%sineTable.table.size();
 	}
 
+	// give looper a chance to output it's stored events
+	looper.advancePlayback(streamTime - lastPlayTimestamp);
+	lastPlayTimestamp = streamTime;
+
 	return 0;
 }
 
 void midiInputCallback(double deltatime, std::vector<unsigned char> *message, void *userData)
 {
+
+	int device = *((int*)(userData));
+
 	double timestamp = audio.getStreamTime();
 	unsigned int nBytes = message->size();
 
 	// output the MIDI message
 	std::cout << std::setprecision(10) << std::setw(8)
 		<< timestamp << '\t'
-		<< std::setw(8) << deltatime << std::hex;
+		<< std::setw(8) << deltatime << device << std::hex;
 	for (unsigned int i=0; i<nBytes; ++i)
 	{
 		std::cout << '\t' << (int)(message->at(i));
@@ -126,7 +135,7 @@ void midiInputCallback(double deltatime, std::vector<unsigned char> *message, vo
 	for (int i=0; i<midiBinds.size(); ++i)
 	{
 		// TODO: pass proper device ID
-		midiBinds[i].processMessage(timestamp, 0, message, userData);
+		midiBinds[i].processMessage(timestamp, device, message, userData);
 	}
 
 	// pass to phrase tracks
@@ -173,7 +182,8 @@ void loadBindSettings()
 
 int main(int argc, char** argv)
 {
-	midiIn.push_back(new RtMidiIn("Guityup"));
+	midiIn.push_back(new RtMidiIn("Guityup remote"));
+	midiIn.push_back(new RtMidiIn("Guityup instrument"));
 	midiOut.push_back(new RtMidiOut("Guityup"));
 
 	listDevices(audio,*midiIn[0],*midiOut[0]);
@@ -207,8 +217,17 @@ int main(int argc, char** argv)
 		midiIn[0]->openVirtualPort("Guityup");
 	else
 		midiIn[0]->openPort(midi_input_device, "Guityup");
-	midiIn[0]->setCallback(&midiInputCallback, &midiIn[0]);
+	midiIn[0]->setCallback(&midiInputCallback, &midi_input_device);
 	midiIn[0]->ignoreTypes(false,false,false);
+
+	int midi_input_instrument_device = config.read<int>("midi_instrument_in",-1);
+	if (midi_input_instrument_device == -1)
+		midiIn[1]->openVirtualPort("Guityup");
+	else
+		midiIn[1]->openPort(midi_input_instrument_device, "Guityup");
+	midiIn[1]->setCallback(&midiInputCallback, &midi_input_instrument_device);
+	midiIn[1]->ignoreTypes(false,false,false);
+
 
 	int midi_output_device = config.read<int>("midi_out", -1);
 	if (midi_output_device == -1)
@@ -229,6 +248,7 @@ int main(int argc, char** argv)
 
 	try
 	{
+		lastPlayTimestamp = 0;
 		audio.startStream();
 
 		// TODO: replace this with select or put it in its
