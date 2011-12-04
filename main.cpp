@@ -123,6 +123,7 @@ void midiInputCallback(double deltatime, std::vector<unsigned char> *message, vo
 
 	// output the MIDI message
 	std::cout << std::setprecision(10) << std::setw(8)
+		<< "INP" << device << '\t'
 		<< timestamp << '\t'
 		<< std::setw(8) << deltatime << device << std::hex;
 	for (unsigned int i=0; i<nBytes; ++i)
