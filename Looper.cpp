@@ -63,6 +63,7 @@ int MidiLooper::getScrubPositionInSamples() const
 
 double MidiLooper::getScrubPositionInSeconds() const
 {
+	return scrubPosition;
 }
 
 void MidiLooper::setRecording(bool recording)

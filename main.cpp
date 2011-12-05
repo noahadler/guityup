@@ -6,6 +6,8 @@
 #include "MidiBind.h"
 #include <iostream>
 #include <iomanip>
+#include <string>
+#include <sstream>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
@@ -28,6 +30,16 @@ MidiLooper looper;
 std::vector<MidiBind> midiBinds;
 
 double lastPlayTimestamp;
+std::string loop_position_led_prefix;
+int loop_position_led_count;
+
+lo_address osc_target_address;
+
+void readMiscellaneousSettings()
+{
+	loop_position_led_prefix = config.read<std::string>("loop_position_led_prefix", "/2/led");
+	loop_position_led_count = config.read<int>("loop_position_led_count", 16);
+}
 
 // liblo functions
 void osc_error(int num, const char *m, const char *path);
@@ -109,6 +121,23 @@ int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFr
 	// give looper a chance to output it's stored events
 	looper.advancePlayback(streamTime - lastPlayTimestamp);
 	lastPlayTimestamp = streamTime;
+
+	// output time indication to OSC
+	static int lastLedTime = 0;
+	int ledTime = static_cast<int>(1 + loop_position_led_count * (looper.getScrubPositionInSeconds() / looper.getLengthInSeconds()));
+	if (ledTime != lastLedTime)
+	{
+		std::ostringstream lastLedPath;
+		lastLedPath << loop_position_led_prefix << lastLedTime;
+		lo_send(osc_target_address, lastLedPath.str().c_str(), "i", 0);
+		std::ostringstream ledPath;
+		ledPath << loop_position_led_prefix << ledTime;
+		lo_send(osc_target_address, ledPath.str().c_str(), "i", 1);
+		lastLedTime = ledTime;
+	}
+	//std::cout << "OSC TIME " << ledTime << std::endl;
+	
+	
 
 	return 0;
 }
@@ -244,8 +273,12 @@ int main(int argc, char** argv)
 	lo_server osc_server = lo_server_new("7770", osc_error);
 	lo_server_add_method(osc_server, NULL, NULL, osc_generic_handler, NULL);
 
+	osc_target_address = lo_address_new("25.177.252.126", "3333");
+
 	// restore bonds
 	loadBindSettings();
+
+	readMiscellaneousSettings();
 
 	try
 	{
